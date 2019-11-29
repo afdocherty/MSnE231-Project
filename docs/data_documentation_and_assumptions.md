@@ -23,10 +23,11 @@
 	* __state__: the state that the call falls within
 	
 	* __POPULATION ASSUMPTIONS AND NOTES__:
+		* The Census data used is from 2015
 		* `pop_wht` and `pop_nw` sum to 1
 		* Employment statistics are for those 16 and older
 		* Education statistics are for those 25 and older
-	* __pop_tot__: the total population of the census tract
+	* __pop_tot__: the total population (ie number of people) of the census tract
 	* __pop_wht__: proportion of the total population White alone (non-hispanic)
 	* __pop_nw__: proportion of the total population non-white alone
 	* __pop_blk__: proportion of the total population Black alone (non-hispanic)

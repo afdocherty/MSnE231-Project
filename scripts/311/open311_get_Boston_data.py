@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ElementTree
 import requests
 from collections import OrderedDict
 
-URL_SUB_PAGE = "http://311.boston.gov/open311/v2/requests.xml?start_date=2012-11-15T00:00:00Z&end_date=2013-11-15T00:00:00Z&page="
+URL_SUB_PAGE = "http://311.boston.gov/open311/v2/requests.xml?start_date=2014-11-15T00:00:00Z&end_date=2015-11-15T00:00:00Z&page="
 PAGE_SIZE = 200
 CITY_NAME = "Boston, MA"
 FAILED_ATTEMPTS_LIMIT = 3

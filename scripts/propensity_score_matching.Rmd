@@ -4,13 +4,52 @@ output: html_document
 ---
 
 ```{r}
-city_data = read.csv("../../local/CHI_SFO_data_census.tsv", sep = "\t")
+BOS_data = read.csv("../../local/BOS_data_census.tsv", sep = "\t")
+CHI_data = read.csv("../../local/CHI_data_census.tsv", sep = "\t")
+SFO_data = read.csv("../../local/SFO_data_census.tsv", sep = "\t")
 census_data = read.csv("../data/census/census_data.tsv", sep = "\t")
 ```
 
 ```{r}
 library(dplyr)
 ```
+
+```{r}
+BOS_CHI_SFO_data <- dplyr::bind_rows(BOS_data, CHI_data, SFO_data)
+```
+
+```{r}
+BOS_CHI_SFO_data <- subset(BOS_CHI_SFO_data, select = -c(address))
+```
+
+```{r}
+write.table(BOS_CHI_SFO_data,file='BOS_CHI_SFO_data_census.tsv',row.names=FALSE,quote=FALSE,sep="\t")
+```
+
+```{r}
+BOS_CHI_SFO_data_NA <- BOS_CHI_SFO_data %>%
+  filter(is.na(adv) == TRUE)
+```
+
+```{r}
+summary(BOS_CHI_SFO_data_NA)
+```
+
+```{r}
+write.table(BOS_CHI_SFO_data_NA,file='BOS_CHI_SFO_data_census.tsv',row.names=FALSE,quote=FALSE,sep="\t")
+```
+
+
+
+```{r}
+cols_to_convert_to_factor <- c("city", "status", "srvc_nm", "geoid", "detail", "st_fip", "cty_fip", "trt_fip", "state", "req_aim", "illegal", "adv", "topic")
+BOS_CHI_SFO_data[cols_to_convert_to_factor] <- lapply(BOS_CHI_SFO_data[cols_to_convert_to_factor], as.factor)
+```
+
+```{r}
+summary(BOS_CHI_SFO_data)
+```
+
 
 ```{r}
 #city_data_n30_sub <- city_data %>%

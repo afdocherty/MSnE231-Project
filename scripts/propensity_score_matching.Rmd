@@ -76,10 +76,7 @@ df_311_census <- df_311_census %>%
 ## Filter out tracts with no pop_nw data
 ```{r}
 (nrow(df_311_census))
-df_311_census <- df_311_census %>%
-  
-  group_by(geoid) %>%
-  filter(n() > 30)
+df_311_census <- na.omit(df_311_census, cols="pop_nw")
 (nrow(df_311_census))
 ```
 
@@ -97,16 +94,42 @@ df_311_census <- df_311_census %>%
     count(nw_60pct))
 ```
 
-## Create calls per month datasets
+## Find 311 requests per month
 
 ```{r}
 library(lubridate)
 df_311_census$req_dt <- as.Date(df_311_census$req_dt)
 df_311_census$updt_dt <- as.Date(df_311_census$updt_dt)
-df_311_monthly_full <- df_311_census %>% 
+```
+
+```{r}
+df_311_monthly_full <- df_311_census %>%
   group_by(month=floor_date(req_dt, "month")) %>%
-  group_by(nw_60pct) %>%
-  tally()
+  count(geoid)
+
+#TODO: remove first 2 months - limit to certain range, e.g. 2008-2014? by city?
+
+avg_mon_reqs <- aggregate(df_311_monthly_full$n, by=list(geoid=df_311_monthly_full$geoid), mean)
+```
+
+```{r}
+population_totals <- cbind.data.frame("geoid" = df_311_census$geoid, "pop_tot" = df_311_census$pop_tot)
+
+joined_mon_reqs_and_pop_tot <- avg_mon_reqs %>%
+  left_join(population_totals) %>%
+  distinct() %>%
+  mutate(reqs_per_mon_per_1k = 1000 * (x / pop_tot))
+```
+
+# Filter out Nov 2019 data since month not completed
+
+```{r}
+df_311_monthly_full <- df_311_monthly_full %>%
+  filter(month <= as.Date("2019-10-01"))
+```
+
+```{r}
+plot(df_311_monthly_full)
 ```
 
 

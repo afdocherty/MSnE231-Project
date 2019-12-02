@@ -2,73 +2,168 @@
 title: "Tract Matching"
 output: html_document
 ---
-
-```{r}
-BOS_data = read.csv("../../local/BOS_data_census.tsv", sep = "\t")
-CHI_data = read.csv("../../local/CHI_data_census.tsv", sep = "\t")
-SFO_data = read.csv("../../local/SFO_data_census.tsv", sep = "\t")
-census_data = read.csv("../data/census/census_data.tsv", sep = "\t")
-```
-
+# Prep
+## Imports
 ```{r}
 library(dplyr)
 ```
 
+## Pull city data sources
 ```{r}
-BOS_CHI_SFO_data <- dplyr::bind_rows(BOS_data, CHI_data, SFO_data)
+BOS_data_raw = read.csv("../../local/BOS_data_census.tsv", sep = "\t")
+CHI_data_raw = read.csv("../../local/CHI_data_census.tsv", sep = "\t")
+SFO_data_raw = read.csv("../../local/SFO_data_census.tsv", sep = "\t")
 ```
 
+## Convert datetime columns to POSIXct
 ```{r}
-BOS_CHI_SFO_data <- subset(BOS_CHI_SFO_data, select = -c(address))
+BOS_data_raw$req_dt <- as.POSIXct(BOS_data_raw$req_dt,
+            format = "%Y-%m-%dT%H:%M:%SZ",
+            tz = "America/New_York")
+CHI_data_raw$req_dt <- as.POSIXct(CHI_data_raw$req_dt,
+            format = "%Y-%m-%dT%H:%M:%SZ",
+            tz = "America/Chicago")
+SFO_data_raw$req_dt <- as.POSIXct(SFO_data_raw$req_dt,
+            format = "%Y-%m-%dT%H:%M:%SZ",
+            tz = "America/Los_Angeles")
+
+BOS_data_raw$updt_dt <- as.POSIXct(BOS_data_raw$updt_dt,
+            format = "%Y-%m-%dT%H:%M:%SZ",
+            tz = "America/New_York")
+CHI_data_raw$updt_dt <- as.POSIXct(CHI_data_raw$updt_dt,
+            format = "%Y-%m-%dT%H:%M:%SZ",
+            tz = "America/Chicago")
+SFO_data_raw$updt_dt <- as.POSIXct(SFO_data_raw$updt_dt,
+            format = "%Y-%m-%dT%H:%M:%SZ",
+            tz = "America/Los_Angeles")
 ```
 
+## Combine city data sources
 ```{r}
-write.table(BOS_CHI_SFO_data,file='BOS_CHI_SFO_data_census.tsv',row.names=FALSE,quote=FALSE,sep="\t")
+df_311_census <- dplyr::bind_rows(BOS_data_raw, CHI_data_raw, SFO_data_raw)
 ```
 
+## Clear city data sources
 ```{r}
-BOS_CHI_SFO_data_NA <- BOS_CHI_SFO_data %>%
-  filter(is.na(adv) == TRUE)
+rm(BOS_data_raw, CHI_data_raw, SFO_data_raw)
 ```
 
+## Remove any unneccesarry columns
 ```{r}
-summary(BOS_CHI_SFO_data_NA)
+df_311_census <- subset(df_311_census, select = -c(address))
 ```
 
-```{r}
-write.table(BOS_CHI_SFO_data_NA,file='BOS_CHI_SFO_data_census.tsv',row.names=FALSE,quote=FALSE,sep="\t")
-```
-
-
-
+## Convert non-numeric columns to factors
 ```{r}
 cols_to_convert_to_factor <- c("city", "status", "srvc_nm", "geoid", "detail", "st_fip", "cty_fip", "trt_fip", "state", "req_aim", "illegal", "adv", "topic")
-BOS_CHI_SFO_data[cols_to_convert_to_factor] <- lapply(BOS_CHI_SFO_data[cols_to_convert_to_factor], as.factor)
+df_311_census[cols_to_convert_to_factor] <- lapply(df_311_census[cols_to_convert_to_factor], as.factor)
 ```
 
+## Summarize full city data
 ```{r}
-summary(BOS_CHI_SFO_data)
+summary(df_311_census)
 ```
 
-
+## Filter out tracts with n <= 30 data points
 ```{r}
-#city_data_n30_sub <- city_data %>%
-#  group_by(geoid) %>%
-#  filter(n() > 30)
-```
-
-```{r}
-city_geoids <- city_data %>%
+(nrow(df_311_census))
+df_311_census <- df_311_census %>%
   group_by(geoid) %>%
-  filter(n() > 30) %>%
-  select(geoid) %>%
-  distinct(geoid)
+  filter(n() > 30)
+(nrow(df_311_census))
+```
+
+## Filter out tracts with no pop_nw data
+```{r}
+(nrow(df_311_census))
+df_311_census <- df_311_census %>%
+  
+  group_by(geoid) %>%
+  filter(n() > 30)
+(nrow(df_311_census))
+```
+
+### Define treatment as 60%+ non-white tract (nw_60pct)
+```{r}
+nw_threshold = 0.60
+
+df_311_census <- df_311_census %>%
+  mutate(nw_60pct = ifelse(pop_nw >= nw_threshold, 1, 0))
 ```
 
 ```{r}
-census_data_subset <- census_data %>%
+(df_311_census %>%
+    group_by(city) %>%
+    count(nw_60pct))
+```
+
+## Create calls per month datasets
+
+```{r}
+library(lubridate)
+df_311_census$req_dt <- as.Date(df_311_census$req_dt)
+df_311_census$updt_dt <- as.Date(df_311_census$updt_dt)
+df_311_monthly_full <- df_311_census %>% 
+  group_by(month=floor_date(req_dt, "month")) %>%
+  group_by(nw_60pct) %>%
+  tally()
+```
+
+
+# Run naive OLS 
+
+```{r}
+df_311_census %>%
+  group_by()
+```
+
+# Propensity score matching (PSM)
+
+## Prep
+
+```{r}
+df_census_raw = read.csv("../data/census/census_data.tsv", sep = "\t")
+```
+
+```{r}
+census_data_subset <- census_data_subset %>%
+  mutate(nw_60pct = ifelse(pop_nw >= nw_threshold, 1, 0))
+```
+
+### Filter down tracts to subset with complete cases (no missing/NA values)
+```{r}
+census_data_subset <- census_data_subset[complete.cases(census_data_subset), ]
+sum(census_data_subset$maj_nw)
+nrow(census_data_subset)
+```
+
+
+### Filter down census_data to remaining tracts
+
+```{r}
+df_census <- df_census_raw %>%
   filter(geoid %in% city_geoids$geoid)
 ```
+
+## PSM: within-city
+
+### Prep
+
+### Matching
+
+### Balance checks
+
+### Treatment effect estimation
+
+## PSM: across cities
+
+### Prep
+
+### Matching
+
+### Balance checks
+
+### Treatment effect estimation
 
 ```{r}
 nw_threshold = 0.6
